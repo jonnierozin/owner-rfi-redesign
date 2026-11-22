@@ -32,11 +32,33 @@ function App() {
   const city = addr ? addr.city : 'your area';
 
   // ---- Navigation (browser back/forward aware) ----
-  const go = (step) => {
+  const go = (step, opts = {}) => {
     track('step_completed', { step_id: s.step });
     histIdx.current += 1;
     history.pushState({ step, idx: histIdx.current }, '', urlFor(step));
-    dispatch({ type: 'go', step });
+    dispatch({ type: 'go', step, returnTo: opts.returnTo });
+  };
+
+  // Leaving a step: normally go to the next one, but after editing an earlier
+  // answer from the profile, jump straight back to where the owner was.
+  const advance = (from, natural, answersAfter) => {
+    const back = s.returnTo;
+    if (back && back !== from) {
+      // Switching to "Yes, it's rented" adds the management question.
+      if (from === 'renting' && answersAfter.renting === 'yes' && !answersAfter.manage) return go('manage');
+      return go(back, { returnTo: null });
+    }
+    return go(natural, { returnTo: null });
+  };
+
+  const editStep = (step) => {
+    if (step === s.step) { dispatch({ type: 'editing', value: false }); return; }
+    track('answer_edited', { step_id: step, from_step: s.step });
+    go(step, { returnTo: s.returnTo || s.step });
+  };
+  const toggleEditing = () => {
+    if (!s.editing) track('profile_summary_opened', { step_id: s.step });
+    dispatch({ type: 'editing', value: !s.editing });
   };
 
   const back = () => {
@@ -83,7 +105,7 @@ function App() {
     if (a[step] && a[step] !== value) track('answer_edited', { step_id: step });
     dispatch({ type: 'answer', patch: { [step]: value } });
     const next = typeof QUESTIONS[step].next === 'function' ? QUESTIONS[step].next(value) : QUESTIONS[step].next;
-    setTimeout(() => go(next), 220);
+    setTimeout(() => advance(step, next, { ...a, [step]: value }), 220);
   };
 
   const errors = contactErrors(s.contact);
@@ -97,10 +119,13 @@ function App() {
 
   const slotText = s.slot.day !== null && s.slot.time !== null ? `${days[s.slot.day].long} · ${TIMES[s.slot.time]}` : '';
 
+  // True while the owner is changing an earlier answer from "Edit answers".
+  const isEditingPast = !!s.returnTo && s.returnTo !== s.step;
+
   let cta = null;
   if (s.step === 'beds') {
     cta = { label: 'See rental potential', note: 'Next: add your address to see it', enabled: true,
-      onClick: () => { dispatch({ type: 'answer', patch: { bedsSet: true } }); go('address'); } };
+      onClick: () => { dispatch({ type: 'answer', patch: { bedsSet: true } }); advance('beds', 'address', a); } };
   }
   if (s.step === 'address') {
     cta = { label: 'Continue to unlock it', note: 'Next: how it’s rented today', enabled: !!addr,
@@ -108,7 +133,7 @@ function App() {
         if (!addr) { track('step_error', { step_id: 'address', error_type: 'no_address' }); return; }
         if (addr.manual) track('address_manual_entry_used', {});
         dispatch({ type: 'answer', patch: { addr } });
-        go('renting');
+        advance('address', 'renting', a);
       } };
   }
   if (s.step === 'contact') {
@@ -131,6 +156,9 @@ function App() {
     cta = { label: 'Book this time', note: 'Your property details are already submitted.', enabled: ok,
       onClick: () => { if (ok) { track('consultation_booked', {}); go('booked'); } } };
   }
+  if (cta && isEditingPast && (s.step === 'beds' || s.step === 'address')) {
+    cta = { ...cta, label: 'Save and go back', note: 'You’ll return to where you were' };
+  }
 
   let content;
   if (QUESTIONS[s.step]) content = html`<${ChoiceStep} step=${s.step} answers=${a} onPick=${pick} />`;
@@ -152,6 +180,8 @@ function App() {
   const phase = phaseInfo(s.step, a);
   const canGoBack = s.visited.length > 0 && (!s.submitted || s.step === 'schedule');
   const mobileTrust = ['intent', 'type', 'beds', 'contact'].includes(s.step);
+  // Answers can be edited until the details are submitted.
+  const canEdit = !s.submitted && chips.length > 0;
 
   return html`
     <div class="app">
@@ -159,8 +189,11 @@ function App() {
       <${TopBar} phase=${phase} canGoBack=${canGoBack} onBack=${back} />
       <div class="layout">
         <main class="main" key=${s.step}>
-          ${s.step !== 'intent' && html`<${ProfileStrip} chips=${chips} />`}
+          ${s.step !== 'intent' && html`<${ProfileStrip} chips=${chips} editing=${s.editing} canEdit=${canEdit}
+              current=${s.step} onToggle=${toggleEditing} onEdit=${editStep} />`}
           <div class="main__content">
+            ${isEditingPast && !s.submitted && html`
+              <p class="edit-notice" role="status">Changing an earlier answer. You’ll go right back to where you were after.</p>`}
             ${content}
             ${supporting && html`<div class="mobile-only">${supporting}</div>`}
             ${mobileTrust && html`<div class="mobile-only"><${TrustBanner} /></div>`}
@@ -168,7 +201,8 @@ function App() {
           ${cta && html`<${Cta} ...${cta} />`}
         </main>
         <aside class="aside desktop-only" aria-label="About your property">
-          <${ProfileCard} chips=${chips} />
+          <${ProfileCard} chips=${chips} editing=${s.editing} canEdit=${canEdit}
+            current=${s.step} onToggle=${toggleEditing} onEdit=${editStep} />
           ${supporting}
           <${TrustBanner} />
         </aside>

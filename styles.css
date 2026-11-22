@@ -57,7 +57,7 @@ button { font: inherit; }
 
 /* ---------- Text ---------- */
 .title { margin: 0; font-family: var(--font-head); font-weight: 800; font-size: 28px; line-height: 1.15; color: var(--ink); }
-.title--number { font-size: 34px; line-height: 1.1; }
+.title--number { font-size: 30px; line-height: 1.1; }
 .title--number span, .rental__value span { display: inline-block; white-space: nowrap; font-family: var(--font-body); font-size: 15px; font-weight: 600; color: var(--body); }
 .field-title { margin: 0; font-size: 14px; font-weight: 700; }
 .lede { margin: 0; font-size: 15px; line-height: 1.5; color: var(--body); }
@@ -73,8 +73,21 @@ button { font: inherit; }
 .divider-top { padding-top: 10px; border-top: 1px solid var(--mist); }
 
 /* ---------- Profile ---------- */
-.profile-strip { margin: 4px 16px 0; padding: 6px 6px 6px 12px; min-height: 48px; border-radius: 14px; display: flex !important; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); }
+.profile-strip { margin: 4px 16px 0; padding: 6px 6px 6px 12px; min-height: 48px; border-radius: 14px; display: flex !important; flex-direction: column; justify-content: center; gap: 6px; background: var(--card); border: 1px solid var(--line); }
+.profile-strip.is-editing { border-color: var(--teal); padding-bottom: 10px; }
+.profile-strip__row { display: flex; align-items: center; gap: 8px; }
+.profile-strip__hint { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--teal); }
 .profile-strip__chips { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+.profile-strip.is-editing .profile-strip__chips { flex-wrap: wrap; white-space: normal; overflow: visible; gap: 8px; }
+.profile-strip__row .profile-strip__hint { flex: 1; margin: 0; }
+.chip.chip--edit { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 10px; border: 1.5px solid var(--teal); background: var(--card); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; animation: none; }
+.chip.chip--edit:hover { background: var(--mist); }
+.chip.chip--edit.is-here { border-style: dashed; border-color: var(--line-strong); color: var(--muted); cursor: default; background: transparent; }
+.chip__icon { display: flex; color: var(--teal); }
+.chip__icon svg { width: 12px; height: 12px; }
+.edit-notice { margin: 0; padding: 10px 12px; border-radius: 10px; border: 1.5px dashed var(--teal); font-size: 13px; font-weight: 600; line-height: 1.45; color: var(--teal); }
+.link-btn--sm { min-height: 36px; padding: 0 8px; font-size: 13px; }
+.profile-card.is-editing { border-color: var(--teal); }
 .chip { flex: none; font-size: 12px; font-weight: 600; padding: 5px 8px; border-radius: 8px; background: var(--mist); color: var(--ink); animation: pop 260ms ease both; }
 .chip--lg { font-size: 13px; padding: 6px 10px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }

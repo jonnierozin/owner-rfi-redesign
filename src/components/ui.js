@@ -38,30 +38,51 @@ export function TopBar({ phase, canGoBack, onBack }) {
     </header>`;
 }
 
-export function ProfileStrip({ chips }) {
-  const shown = chips.slice(0, 3);
+// A profile answer. In edit mode it becomes a button that jumps back to its step.
+function ProfileChip({ chip, editing, current, large, onEdit }) {
+  const cls = `chip ${large ? 'chip--lg' : ''}`;
+  if (!editing) return html`<span class=${cls}>${chip.label}</span>`;
+  const here = chip.step === current;
+  return html`
+    <button class=${`${cls} chip--edit ${here ? 'is-here' : ''}`} onClick=${() => onEdit(chip.step)}
+      aria-label=${here ? `${chip.label}, on this step` : `Change ${chip.label}`} aria-current=${here ? 'step' : undefined}>
+      ${chip.label}${!here && html`<span class="chip__icon">${Icon.edit}</span>`}
+    </button>`;
+}
+
+export function ProfileStrip({ chips, editing, canEdit, current, onToggle, onEdit }) {
+  const shown = editing ? chips : chips.slice(0, 3);
   const more = chips.length - shown.length;
   return html`
-    <div class="profile-strip mobile-only" role="group" aria-label="Your property">
-      <div class="profile-strip__chips">
-        ${shown.length === 0 && html`<span class="muted">Your property profile builds here</span>`}
-        ${shown.map((c) => html`<span class="chip" key=${c}>${c}</span>`)}
-        ${more > 0 && html`<span class="chip">+${more}</span>`}
+    <div class=${`profile-strip mobile-only ${editing ? 'is-editing' : ''}`} role="group" aria-label="Your property">
+      ${editing && html`
+        <div class="profile-strip__row">
+          <p class="profile-strip__hint">Tap an answer to change it</p>
+          <button class="link-btn link-btn--sm" onClick=${onToggle} aria-pressed=${true}>Done</button>
+        </div>`}
+      <div class="profile-strip__row">
+        <div class="profile-strip__chips">
+          ${shown.length === 0 && html`<span class="muted">Your property profile builds here</span>`}
+          ${shown.map((c) => html`<${ProfileChip} key=${c.step} chip=${c} editing=${editing} current=${current} onEdit=${onEdit} />`)}
+          ${more > 0 && html`<span class="chip">+${more}</span>`}
+        </div>
+        ${canEdit && !editing && html`
+          <button class="icon-btn" onClick=${onToggle} aria-pressed=${false} aria-label="Edit your property answers">${Icon.edit}</button>`}
       </div>
-      <button class="icon-btn" aria-label="Edit your property answers">${Icon.edit}</button>
     </div>`;
 }
 
-export function ProfileCard({ chips }) {
+export function ProfileCard({ chips, editing, canEdit, current, onToggle, onEdit }) {
   return html`
-    <section class="card profile-card" aria-labelledby="profile-title">
+    <section class=${`card profile-card ${editing ? 'is-editing' : ''}`} aria-labelledby="profile-title">
       <div class="card__head">
         <h2 id="profile-title" class="card__title">Your property</h2>
-        <button class="link-btn">Edit answers</button>
+        ${canEdit && html`<button class="link-btn" onClick=${onToggle} aria-pressed=${editing}>${editing ? 'Done' : 'Edit answers'}</button>`}
       </div>
+      ${editing && html`<p class="small muted-strong">Choose an answer to change it. You’ll come right back here after.</p>`}
       <div class="chips">
         ${chips.length === 0 && html`<p class="muted small">Your answers build your property profile here as you go.</p>`}
-        ${chips.map((c) => html`<span class="chip chip--lg" key=${c}>${c}</span>`)}
+        ${chips.map((c) => html`<${ProfileChip} key=${c.step} chip=${c} editing=${editing} current=${current} large=${true} onEdit=${onEdit} />`)}
       </div>
     </section>`;
 }

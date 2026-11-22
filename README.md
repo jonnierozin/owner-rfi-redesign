@@ -30,6 +30,8 @@ Useful links:
 | 3 · Connect | Contact details (RFI is submitted here) |
 | 4 · Next steps | Submitted → optional: pick a time → booked, or skip → "we'll reach out" |
 
+**Editing answers:** tap "Edit answers" (desktop) or the pencil (mobile) on the property profile and each answer becomes a link back to its step. After changing it, the owner returns straight to where they were. Switching "currently renting" to yes adds the management question first. Editing closes once the details are submitted.
+
 Required data is all kept: name (first and last), email, phone, property address, property type, bedrooms, furnished, currently renting. Intent, management and timeline are kept for qualification and routing.
 
 ## What each change tests

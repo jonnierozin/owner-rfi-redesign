@@ -79,16 +79,17 @@ export function profileChips(s) {
     const opt = QUESTIONS[step].options.find((o) => o.value === a[step]);
     return opt && opt.chip;
   };
+  // Each chip knows which step it came from, so it can link back there to edit.
   const out = [];
-  if (a.type) out.push(chip('type'));
-  if (a.bedsSet) out.push(a.beds === 0 ? 'Studio' : `${a.beds} bed`);
+  if (a.type) out.push({ label: chip('type'), step: 'type' });
+  if (a.bedsSet) out.push({ label: a.beds === 0 ? 'Studio' : `${a.beds} bed`, step: 'beds' });
   const addr = confirmedAddress(a);
-  if (addr) out.push(addr.city);
-  if (a.renting) out.push(chip('renting'));
-  if (a.manage && a.renting === 'yes') out.push(chip('manage'));
-  if (a.furnish) out.push(chip('furnish'));
-  if (a.timeline) out.push(chip('timeline'));
-  return out.filter(Boolean);
+  if (addr) out.push({ label: addr.city, step: 'address' });
+  if (a.renting) out.push({ label: chip('renting'), step: 'renting' });
+  if (a.manage && a.renting === 'yes') out.push({ label: chip('manage'), step: 'manage' });
+  if (a.furnish) out.push({ label: chip('furnish'), step: 'furnish' });
+  if (a.timeline) out.push({ label: chip('timeline'), step: 'timeline' });
+  return out.filter((c) => c.label);
 }
 
 // ---- State ------------------------------------------------------------------
@@ -122,6 +123,8 @@ export function createState(startStep = 'intent') {
     contact,
     touched: {},
     tried: false,
+    editing: false,   // "Edit answers" mode: profile chips become links back to their step
+    returnTo: null,   // after editing an earlier answer, the step to jump back to
     submitted: POST_SUBMIT.includes(step),
     slot: step === 'booked' ? { day: 1, time: 2 } : { day: null, time: null }
   };
@@ -141,6 +144,8 @@ export function reducer(s, action) {
       return { ...s, tried: true };
     case 'slot':
       return { ...s, slot: { ...s.slot, ...action.patch } };
+    case 'editing':
+      return { ...s, editing: action.value };
     case 'go': {
       const keep = ['schedule', 'booked', 'skipped'].includes(s.step) ? s.visited : [...s.visited, s.step];
       return {
@@ -148,6 +153,8 @@ export function reducer(s, action) {
         step: action.step,
         visited: keep,
         tried: false,
+        editing: false,
+        returnTo: action.returnTo !== undefined ? action.returnTo : s.returnTo,
         submitted: s.submitted || action.step === 'submitted'
       };
     }
@@ -155,7 +162,7 @@ export function reducer(s, action) {
       // Browser back/forward.
       const i = s.visited.lastIndexOf(action.step);
       const visited = i >= 0 ? s.visited.slice(0, i) : s.visited;
-      return { ...s, step: action.step, visited, tried: false };
+      return { ...s, step: action.step, visited, tried: false, editing: false };
     }
     default:
       return s;
