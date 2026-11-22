@@ -162,7 +162,7 @@ export function AddressStep({ answers, addr, beds, dispatch, onSuggestion }) {
 }
 
 // ---- Contact (H2) ----
-export function ContactStep({ contact, errors, show, city, dispatch }) {
+export function ContactStep({ contact, errors, show, city, dispatch, quick, onFullFlow }) {
   const input = (id, field, extra = {}) => html`
     <input id=${id} class=${`input ${show[field] && errors[field] ? 'is-error' : ''} ${!errors[field] ? 'is-valid' : ''}`}
       value=${contact[field]} aria-invalid=${!!(show[field] && errors[field])}
@@ -172,11 +172,17 @@ export function ContactStep({ contact, errors, show, city, dispatch }) {
       ...${extra.attrs || {}} />`;
   return html`
     <div class="stack">
-      <div class="stack-sm">
-        <p class="eyebrow">${Icon.trend} Your rental potential</p>
-        <h1 id="step-title" class="title title--number" tabindex="-1">${formatEstimate()} <span>per year</span></h1>
-        <p class="lede">Unlock it by chatting with an Evolve expert. Submit your property details and they’ll show you how your ${city} home could get there.</p>
-      </div>
+      ${quick ? html`
+        <div class="stack-sm">
+          <${Title}>Talk to an Evolve expert<//>
+          <p class="lede">Leave your details and an expert will reach out. You can share your property details on the call.</p>
+          <button class="link-btn self-start" onClick=${onFullFlow}>Or see your property’s rental potential first</button>
+        </div>` : html`
+        <div class="stack-sm">
+          <p class="eyebrow">${Icon.trend} Your rental potential</p>
+          <h1 id="step-title" class="title title--number" tabindex="-1">${formatEstimate()} <span>per year</span></h1>
+          <p class="lede">Unlock it by chatting with an Evolve expert. Submit your property details and they’ll show you how your ${city} home could get there.</p>
+        </div>`}
       <div class="contact-grid">
         <${Field} id="c-first" label="First name" error=${show.first && errors.first}>${input('c-first', 'first', { attrs: { autocomplete: 'given-name' } })}<//>
         <${Field} id="c-last" label="Last name" error=${show.last && errors.last}>${input('c-last', 'last', { attrs: { autocomplete: 'family-name' } })}<//>
@@ -194,10 +200,14 @@ const Done = ({ title, children }) => html`
     <p class="lede">${children}</p>
   </div>`;
 
-export function SubmittedStep({ city, onSchedule, onSkip }) {
+const doneLead = (quick) => (quick ? 'Your call request is in' : 'Your property details are in');
+
+export function SubmittedStep({ city, quick, onSchedule, onSkip }) {
   return html`
     <div class="stack">
-      <${Done} title="Your property details are in">An Evolve expert will review your ${city} property before you talk. Nothing else is required from you.<//>
+      <${Done} title=${doneLead(quick)}>${quick
+        ? 'An Evolve expert will reach out using the details you shared.'
+        : `An Evolve expert will review your ${city} property before you talk. Nothing else is required from you.`}<//>
       <section class="chat-card" aria-labelledby="chat-title">
         <h2 id="chat-title" class="chat-card__title">Want to talk sooner? Pick a time.</h2>
         <p class="eyebrow eyebrow--plain">What you’ll cover</p>
@@ -244,23 +254,23 @@ export function ScheduleStep({ days, slot, onSlot }) {
     </div>`;
 }
 
-export function BookedStep({ slotText, city, onChange }) {
+export function BookedStep({ slotText, city, quick, onChange }) {
   return html`
     <div class="stack">
-      <${Done} title="You’re booked">Your property details are in, and your chat with an Evolve expert is set.<//>
+      <${Done} title="You’re booked">${doneLead(quick)}, and your chat with an Evolve expert is set.<//>
       <div class="card card--pad booked">
         <p class="eyebrow eyebrow--plain">Your chat</p>
         <p class="booked__time">${slotText}</p>
-        <p class="small muted-strong">Rental potential for your ${city} property</p>
+        <p class="small muted-strong">${quick ? 'Your property and how Evolve could help' : `Rental potential for your ${city} property`}</p>
       </div>
       <button class="link-btn self-start" onClick=${onChange}>Change time</button>
     </div>`;
 }
 
-export function SkippedStep({ onSchedule }) {
+export function SkippedStep({ quick, onSchedule }) {
   return html`
     <div class="stack">
-      <${Done} title="You’re all set">Your property details are in. An Evolve expert will reach out using the contact details you shared.<//>
+      <${Done} title="You’re all set">${doneLead(quick)}. An Evolve expert will reach out using the contact details you shared.<//>
       <div class="soft-card">
         <p>Changed your mind? You can still pick a time that works for you.</p>
         <button class="btn btn--secondary" onClick=${onSchedule}>Choose a time</button>

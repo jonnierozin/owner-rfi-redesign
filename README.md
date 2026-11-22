@@ -32,6 +32,8 @@ Useful links:
 
 **Editing answers:** tap "Edit answers" (desktop) or the pencil (mobile) on the property profile and each answer becomes a link back to its step. After changing it, the owner returns straight to where they were. Switching "currently renting" to yes adds the management question first. Editing closes once the details are submitted.
 
+**Request a call:** every question screen has a quiet "Prefer to just talk to someone? Request a call" link. It jumps straight to a call-only contact screen (no estimate, no property questions), and "Or see your property's rental potential first" returns the owner to where they left off. It's tracked as `call_requested_without_details`, and the submit event carries `quick_call: true`, so the shortcut's use can be measured against full-flow submissions. Deep link: `#call`.
+
 Required data is all kept: name (first and last), email, phone, property address, property type, bedrooms, furnished, currently renting. Intent, management and timeline are kept for qualification and routing.
 
 ## What each change tests

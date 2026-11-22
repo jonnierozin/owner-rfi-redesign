@@ -3,10 +3,10 @@ import { QUESTIONS, upcomingDays, TIMES } from './data.js';
 import { track, subscribe } from './analytics.js';
 import {
   createState, reducer, nextStep, phaseInfo, profileChips, confirmedAddress,
-  contactErrors, POST_SUBMIT
+  contactErrors, POST_SUBMIT, CALL_LINK_STEPS
 } from './flow.js';
 import {
-  TopBar, ProfileStrip, ProfileCard, TrustBanner, WhyWeAsk, WhatHappensNext, WhereHeading, Cta, EventLog
+  TopBar, ProfileStrip, ProfileCard, TrustBanner, WhyWeAsk, WhatHappensNext, WhereHeading, Cta, EventLog, CallLink
 } from './components/ui.js';
 import {
   ChoiceStep, BedsStep, AddressStep, ContactStep, SubmittedStep, ScheduleStep, BookedStep, SkippedStep
@@ -137,7 +137,7 @@ function App() {
       } };
   }
   if (s.step === 'contact') {
-    cta = { label: 'Submit property details', note: 'Next: choose a time, or we’ll reach out', legal: true, enabled: contactOk,
+    cta = { label: a.quick ? 'Request a call' : 'Submit property details', note: 'Next: choose a time, or we’ll reach out', legal: true, enabled: contactOk,
       onClick: () => {
         if (!contactOk) {
           dispatch({ type: 'tried' });
@@ -147,33 +147,47 @@ function App() {
           if (el) el.focus();
           return;
         }
-        track('rfi_submitted', { renting: a.renting, intent: a.intent });
+        track('rfi_submitted', { renting: a.renting, intent: a.intent, quick_call: !!a.quick });
         go('submitted');
       } };
   }
   if (s.step === 'schedule') {
     const ok = s.slot.day !== null && s.slot.time !== null;
-    cta = { label: 'Book this time', note: 'Your property details are already submitted.', enabled: ok,
+    cta = { label: 'Book this time', note: 'Your details are already submitted.', enabled: ok,
       onClick: () => { if (ok) { track('consultation_booked', {}); go('booked'); } } };
   }
   if (cta && isEditingPast && (s.step === 'beds' || s.step === 'address')) {
     cta = { ...cta, label: 'Save and go back', note: 'You’ll return to where you were' };
   }
 
+  // "Request a call": skip the remaining questions and go straight to contact details.
+  const requestCall = () => {
+    track('call_requested_without_details', { from_step: s.step });
+    dispatch({ type: 'answer', patch: { quick: true } });
+    go('contact', { returnTo: null });
+  };
+  // From the call-only screen, pick the questions back up where the owner left off.
+  const resumeFlow = () => {
+    const resume = [...s.visited].reverse().find((k) => CALL_LINK_STEPS.includes(k)) || 'intent';
+    dispatch({ type: 'answer', patch: { quick: false } });
+    go(resume, { returnTo: null });
+  };
+  const showCallLink = !a.quick && CALL_LINK_STEPS.includes(s.step) && !isEditingPast;
+
   let content;
   if (QUESTIONS[s.step]) content = html`<${ChoiceStep} step=${s.step} answers=${a} onPick=${pick} />`;
   else if (s.step === 'beds') content = html`<${BedsStep} beds=${a.beds} onChange=${(beds) => dispatch({ type: 'answer', patch: { beds } })} />`;
   else if (s.step === 'address') content = html`<${AddressStep} answers=${a} addr=${addr} beds=${a.beds} dispatch=${dispatch}
       onSuggestion=${(sug) => { track('address_suggestion_selected', {}); dispatch({ type: 'answer', patch: { addr: sug, query: sug.main } }); }} />`;
-  else if (s.step === 'contact') content = html`<${ContactStep} contact=${s.contact} errors=${errors} show=${show} city=${city} dispatch=${dispatch} />`;
-  else if (s.step === 'submitted') content = html`<${SubmittedStep} city=${city} onSchedule=${() => go('schedule')} onSkip=${() => { track('consultation_skipped', {}); go('skipped'); }} />`;
+  else if (s.step === 'contact') content = html`<${ContactStep} contact=${s.contact} errors=${errors} show=${show} city=${city} dispatch=${dispatch} quick=${a.quick} onFullFlow=${resumeFlow} />`;
+  else if (s.step === 'submitted') content = html`<${SubmittedStep} city=${city} quick=${a.quick} onSchedule=${() => go('schedule')} onSkip=${() => { track('consultation_skipped', {}); go('skipped'); }} />`;
   else if (s.step === 'schedule') content = html`<${ScheduleStep} days=${days} slot=${s.slot} onSlot=${(patch) => dispatch({ type: 'slot', patch })} />`;
-  else if (s.step === 'booked') content = html`<${BookedStep} slotText=${slotText} city=${city} onChange=${() => go('schedule')} />`;
-  else if (s.step === 'skipped') content = html`<${SkippedStep} onSchedule=${() => go('schedule')} />`;
+  else if (s.step === 'booked') content = html`<${BookedStep} slotText=${slotText} city=${city} quick=${a.quick} onChange=${() => go('schedule')} />`;
+  else if (s.step === 'skipped') content = html`<${SkippedStep} quick=${a.quick} onSchedule=${() => go('schedule')} />`;
 
   const supporting =
     s.step === 'address' ? html`<${WhyWeAsk} />` :
-    s.step === 'contact' ? html`<${WhatHappensNext} />` :
+    s.step === 'contact' ? html`<${WhatHappensNext} quick=${a.quick} />` :
     ['intent', 'type', 'beds'].includes(s.step) ? html`<${WhereHeading} />` : null;
 
   const chips = profileChips(s);
@@ -189,20 +203,22 @@ function App() {
       <${TopBar} phase=${phase} canGoBack=${canGoBack} onBack=${back} />
       <div class="layout">
         <main class="main" key=${s.step}>
-          ${s.step !== 'intent' && html`<${ProfileStrip} chips=${chips} editing=${s.editing} canEdit=${canEdit}
+          ${s.step !== 'intent' && !a.quick && html`<${ProfileStrip} chips=${chips} editing=${s.editing} canEdit=${canEdit}
               current=${s.step} onToggle=${toggleEditing} onEdit=${editStep} />`}
           <div class="main__content">
             ${isEditingPast && !s.submitted && html`
               <p class="edit-notice" role="status">Changing an earlier answer. You’ll go right back to where you were after.</p>`}
             ${content}
             ${supporting && html`<div class="mobile-only">${supporting}</div>`}
+            ${showCallLink && html`<div class="mobile-only"><${CallLink} onClick=${requestCall} /></div>`}
             ${mobileTrust && html`<div class="mobile-only"><${TrustBanner} /></div>`}
           </div>
           ${cta && html`<${Cta} ...${cta} />`}
+          ${showCallLink && html`<div class="desktop-only call-link-wrap"><${CallLink} onClick=${requestCall} /></div>`}
         </main>
         <aside class="aside desktop-only" aria-label="About your property">
-          <${ProfileCard} chips=${chips} editing=${s.editing} canEdit=${canEdit}
-            current=${s.step} onToggle=${toggleEditing} onEdit=${editStep} />
+          ${!a.quick && html`<${ProfileCard} chips=${chips} editing=${s.editing} canEdit=${canEdit}
+            current=${s.step} onToggle=${toggleEditing} onEdit=${editStep} />`}
           ${supporting}
           <${TrustBanner} />
         </aside>

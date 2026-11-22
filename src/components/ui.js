@@ -25,7 +25,8 @@ export function TopBar({ phase, canGoBack, onBack }) {
         <p class="topbar__step mobile-only">Step ${phase.index + 1} of 4 · ${current.label}</p>
         <ol class="phases" aria-label=${`Progress: phase ${phase.index + 1} of 4, ${current.label}`}>
           ${PHASES.map((p, i) => {
-            const fill = i < phase.index ? 100 : i === phase.index ? Math.round(phase.frac * 100) : 0;
+            const skipped = (phase.skipped || []).includes(i);
+            const fill = skipped ? 0 : i < phase.index ? 100 : i === phase.index ? Math.round(phase.frac * 100) : 0;
             return html`
               <li class=${`phase ${i === phase.index ? 'is-current' : ''} ${i < phase.index ? 'is-done' : ''}`} aria-current=${i === phase.index ? 'step' : undefined}>
                 <span class="phase__bar"><span class="phase__fill" style=${{ width: `${fill}%` }}></span></span>
@@ -111,16 +112,26 @@ export function WhyWeAsk() {
     </section>`;
 }
 
-export function WhatHappensNext() {
+export function WhatHappensNext({ quick }) {
   return html`
     <section class="card" aria-labelledby="next-title">
       <h2 id="next-title" class="card__label">${Icon.clock} What happens next</h2>
       <ol class="card__body steps-list">
-        <li><b>1 · Submit your property details</b><br />Your property profile goes to an Evolve expert</li>
+        ${quick
+          ? html`<li><b>1 · Request a call</b><br />Your contact details go to an Evolve expert</li>`
+          : html`<li><b>1 · Submit your property details</b><br />Your property profile goes to an Evolve expert</li>`}
         <li><b>2 · Pick a time, or we’ll reach out</b><br />Book a chat, or an expert follows up</li>
-        <li><b>3 · Unlock your rental potential</b><br />How to reach it, and whether Evolve is a fit</li>
+        ${quick
+          ? html`<li><b>3 · Talk it through</b><br />Your property, what it could earn, and whether Evolve is a fit</li>`
+          : html`<li><b>3 · Unlock your rental potential</b><br />How to reach it, and whether Evolve is a fit</li>`}
       </ol>
     </section>`;
+}
+
+// A quiet escape hatch: skip the questions and just ask for a call.
+export function CallLink({ onClick }) {
+  return html`
+    <p class="call-link">Prefer to just talk to someone? <button class="link-btn link-btn--inline" onClick=${onClick}>Request a call</button></p>`;
 }
 
 export function WhereHeading() {

@@ -14,6 +14,7 @@ export function nextStep(step, answers) {
 }
 
 export function phaseInfo(step, answers) {
+  const skipped = answers.quick ? [0, 1] : [];
   const groups = [
     ['intent', 'type', 'beds'],
     answers.renting === 'no'
@@ -26,7 +27,7 @@ export function phaseInfo(step, answers) {
   if (index < 0) index = 0;
   const within = groups[index].indexOf(step);
   const frac = index === 3 ? (step === 'submitted' ? 0.5 : 1) : (within + 0.5) / groups[index].length;
-  return { index, frac };
+  return { index, frac, skipped };
 }
 
 // ---- Validation -----------------------------------------------------------
@@ -95,11 +96,20 @@ export function profileChips(s) {
 // ---- State ------------------------------------------------------------------
 const emptyManual = { street: '', unit: '', city: '', state: '', zip: '' };
 
+// Steps where the "Request a call" shortcut is offered.
+export const CALL_LINK_STEPS = ['intent', 'type', 'beds', 'address', 'renting', 'manage', 'furnish', 'timeline'];
+
 export function createState(startStep = 'intent') {
+  // #call deep-links to the call-only contact screen.
+  if (startStep === 'call') {
+    const s = createState('intent');
+    return { ...s, step: 'contact', visited: ['intent'], answers: { ...s.answers, quick: true } };
+  }
   const step = ORDER.includes(startStep) ? startStep : 'intent';
   const at = ORDER.indexOf(step);
   const before = (k) => ORDER.indexOf(k) < at;
-  const answers = { beds: 3, bedsSet: false, query: '', addr: null, manualMode: false, manual: { ...emptyManual } };
+  // quick: the owner chose "Request a call" and skipped the property questions.
+  const answers = { beds: 3, bedsSet: false, query: '', addr: null, manualMode: false, manual: { ...emptyManual }, quick: false };
   const contact = { first: '', last: '', email: '', phone: '' };
 
   // Deep links (?step=…) prefill sample answers for the steps before, so any screen can be demoed directly.
