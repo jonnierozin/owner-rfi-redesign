@@ -2,6 +2,8 @@
 
 A working, responsive prototype of a redesigned owner Request for Information (RFI) flow for a vacation rental manager. It reframes the RFI from "fill out a sales form" to "build a property profile and see its rental potential", while collecting the same required data.
 
+**Live prototype:** https://jonnierozin.github.io/owner-rfi-redesign/
+
 **Prototype only:** nothing you enter is sent anywhere. Submission, the address autocomplete, the rental estimate and the consultation times are simulated.
 
 ## Run it
